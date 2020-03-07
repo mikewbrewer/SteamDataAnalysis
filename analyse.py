@@ -9,6 +9,29 @@ from oauth2client.service_account import ServiceAccountCredentials
 
 
 def analyse(_cursor):
+    # mappings to discount sheet
+    code_total_discount_by_day = {
+        'Sunday': '4',
+        'Monday': '5',
+        'Tuesday': '6',
+        'Wednesday': '7',
+        'Thursday': '8',
+        'Friday': '9',
+        'Saturday': '10'
+    }
+
+    total_days_row_code = '14'
+    total_days_col_code = {
+        'Sunday': 'C',
+        'Monday': 'D',
+        'Tuesday': 'E',
+        'Wednesday': 'F',
+        'Thursday': 'G',
+        'Friday': 'H',
+        'Saturday': 'I'
+    }
+
+
     # connect to google sheets
     scope = [ "https://spreadsheets.google.com/feeds",
         "https://www.googleapis.com/auth/spreadsheets",
@@ -23,9 +46,10 @@ def analyse(_cursor):
     price_wks = sh.get_worksheet(0)
     discount_wks = sh.get_worksheet(1)
 
+    today = str(datetime.now().strftime('%A'))
     # initialize the new rows to be inserted into the worksheets
-    new_price_row = [str(date.today()), str(datetime.now().strftime('%A'))]
-    new_discount_row = [str(date.today()), str(datetime.now().strftime('%A'))]
+    new_price_row = [today, str(date.today())]
+    new_discount_row = []
 
     # get subtable of average prices by genre
     _cursor.execute("""
@@ -52,7 +76,16 @@ def analyse(_cursor):
 
     # write the new rows to the worksheets
     price_wks.append_row(new_price_row, 2)
-    discount_wks.append_row(new_discount_row, 2)
+
+    totals_cols = ['B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K']
+    for i in range(0, len(new_discount_row)):
+        temp = int(discount_wks.acell(totals_cols[i] + code_total_discount_by_day[today]).value) + new_discount_row[i]
+        discount_wks.update_acell(totals_cols[i] + code_total_discount_by_day[today], temp)
+
+    val = discount_wks.acell(total_days_col_code[today] + total_days_row_code).value
+    val = int(val) + 1
+    discount_wks.update_acell(total_days_col_code[today] + total_days_row_code, val)
+
 
 
 
